@@ -52,7 +52,10 @@ def porcentCalc(size1, size2, keys):
 def textComparison(keywords1, keywords2):
     qtdKeys = 0
     for i in keywords1:
+        print("----------------------------------")
+        print(i)
         listaSinonimos = getSinonimos(i)
+        print(listaSinonimos)
         for j in keywords2:
             if i == j:
                qtdKeys+=1

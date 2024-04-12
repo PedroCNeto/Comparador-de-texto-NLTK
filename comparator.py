@@ -3,6 +3,7 @@ from nltk.tokenize import RegexpTokenizer
 import spacy
 import requests
 from bs4 import BeautifulSoup
+from unicodedata import normalize
 import re
 
 nlp = spacy.load("pt_core_news_md")
@@ -31,9 +32,9 @@ def keywordsGetter(bruteText):
     #Faz o lemmer em todas as palavras que sobraram
     textFiltrado = [w.lemma_ for w in textTokensNoStopWords]
 
-    #Para participar do array final a palavra tem que ter 1.5% de aparição no texto
+    #Para participar do array final a palavra tem que ter 0.75% (testes feitos em textos pequenos para textos maiores a % pode ser maior) de aparição no texto
     size = len(textFiltrado)
-    porcentagem = size * 0.005
+    porcentagem = size * 0.0075
 
     #Verifica a frequencia das palavras
     frequenciaTexto = nltk.FreqDist(textFiltrado)
@@ -44,9 +45,12 @@ def keywordsGetter(bruteText):
     return returnArray
 
 def porcentCalc(size1, size2, keys):
+    #Calculo de % baseado na quantidade de keywords encontradas nos 2 textos
     porcent1 = keys*100 / size1
     porcent2 = keys*100 / size2
     porcentTotal = (porcent1 + porcent2) / 2
+    if(porcentTotal > 100):
+        porcentTotal = 100
     return porcentTotal
 
 def textComparison(keywords1, keywords2):
@@ -54,8 +58,12 @@ def textComparison(keywords1, keywords2):
     for i in keywords1:
         print("----------------------------------")
         print(i)
-        listaSinonimos = getSinonimos(i)
+        #Tira o acento para não bugar no lexico
+        palavraSemAcento = normalize('NFKD', i).encode('ASCII','ignore').decode('ASCII')
+        print(palavraSemAcento)
+        listaSinonimos = getSinonimos(palavraSemAcento)
         print(listaSinonimos)
+        #Verifica se achou palavras ou sinonimos no texto todo(pode achar mais de 1 sinonimo por vez)
         for j in keywords2:
             if i == j:
                qtdKeys+=1
@@ -70,12 +78,17 @@ def textComparison(keywords1, keywords2):
     print("A porcentagem é de " + str("{:.2f}".format(porcentTotal)))
 
 def getSinonimos(palavra):
+    #Essa função vai buscar os sinonimos do site Lexico
     url = "https://www.lexico.pt/" + palavra + "/"
     data = requests.get(url)
     soup = BeautifulSoup(data.content,'html.parser')
+    #Pega as palavras, que vem em uma string unica
     palavras = soup.find('p', class_=["words-buttons"])
     if palavras != None:
-        arrayPalavras = palavras.text.split(", ")   
+        #Caso a string não seja nula, ele pega o span que contem todos os sinonimos, pois em alguns casos o texto trazia textos extras
+        sinonimosString = palavras.find('span')
+        #Separa em um array pelas virgulas
+        arrayPalavras = sinonimosString.text.split(", ")   
         return arrayPalavras
     else:
         return []
@@ -86,5 +99,4 @@ print(arrayKeyWords1)
 
 textComparison(arrayKeyWords1, arrayKeyWords2)
 
-#tokens = nltk.word_tokenize(texto)
-#print(tokens)
+
